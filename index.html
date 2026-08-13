@@ -226,26 +226,33 @@
     };
 
 
-    reconocimiento.onresult = function(event) {
+   let textoFinal = "";
 
-      let resultado = "";
+reconocimiento.onresult = function(event) {
 
-      for (
-        let i = 0;
-        i < event.results.length;
-        i++
-      ) {
+  let textoIntermedio = "";
 
-        resultado +=
-          event.results[i][0].transcript + " ";
-      }
+  for (let i = event.resultIndex; i < event.results.length; i++) {
 
-      texto.value =
-        resultado.trim();
+    const transcripcion =
+      event.results[i][0].transcript;
 
-      btnEnviar.disabled =
-        texto.value.trim() === "";
-    };
+    if (event.results[i].isFinal) {
+
+      textoFinal += transcripcion + " ";
+
+    } else {
+
+      textoIntermedio += transcripcion;
+    }
+  }
+
+  texto.value =
+    (textoFinal + textoIntermedio).trim();
+
+  btnEnviar.disabled =
+    texto.value.trim() === "";
+};
 
 
     reconocimiento.onerror = function(event) {
