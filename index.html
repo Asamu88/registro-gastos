@@ -226,7 +226,7 @@
     };
 
 
-   let textoFinal = "";
+let textoFinal = "";
 
 reconocimiento.onresult = function(event) {
 
@@ -235,15 +235,20 @@ reconocimiento.onresult = function(event) {
   for (let i = event.resultIndex; i < event.results.length; i++) {
 
     const transcripcion =
-      event.results[i][0].transcript;
+      event.results[i][0].transcript.trim();
 
     if (event.results[i].isFinal) {
 
-      textoFinal += transcripcion + " ";
+      // Evitar repetir exactamente la misma transcripción
+      if (
+        textoFinal.trim() !== transcripcion
+      ) {
+        textoFinal += transcripcion + " ";
+      }
 
     } else {
 
-      textoIntermedio += transcripcion;
+      textoIntermedio += transcripcion + " ";
     }
   }
 
@@ -253,7 +258,6 @@ reconocimiento.onresult = function(event) {
   btnEnviar.disabled =
     texto.value.trim() === "";
 };
-
 
     reconocimiento.onerror = function(event) {
 
