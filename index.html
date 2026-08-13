@@ -230,30 +230,20 @@ let textoFinal = "";
 
 reconocimiento.onresult = function(event) {
 
-  let textoIntermedio = "";
+  let resultadoCompleto = "";
 
-  for (let i = event.resultIndex; i < event.results.length; i++) {
+  for (let i = 0; i < event.results.length; i++) {
 
     const transcripcion =
       event.results[i][0].transcript.trim();
 
-    if (event.results[i].isFinal) {
-
-      // Evitar repetir exactamente la misma transcripción
-      if (
-        textoFinal.trim() !== transcripcion
-      ) {
-        textoFinal += transcripcion + " ";
-      }
-
-    } else {
-
-      textoIntermedio += transcripcion + " ";
+    if (transcripcion !== "") {
+      resultadoCompleto += transcripcion + " ";
     }
   }
 
   texto.value =
-    (textoFinal + textoIntermedio).trim();
+    resultadoCompleto.trim();
 
   btnEnviar.disabled =
     texto.value.trim() === "";
