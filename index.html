@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Registro de gastos</title>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f2f2f2;
+    }
+
+    .contenedor {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 18px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.15);
+    }
+
+    h1 {
+      text-align: center;
+      margin-top: 0;
+    }
+
+    #estado {
+      padding: 14px;
+      margin: 20px 0;
+      background: #eeeeee;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    button {
+      width: 100%;
+      padding: 17px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    #btnGrabar {
+      background: #222;
+      color: white;
+    }
+
+    #btnDetener {
+      background: #777;
+      color: white;
+    }
+
+    #btnEnviar {
+      background: #1976d2;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      margin-top: 15px;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 17px;
+      resize: vertical;
+    }
+
+    .nota {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="contenedor">
+
+  <h1>🎙️ Registro de gastos</h1>
+
+  <div id="estado">
+    Presiona GRABAR y habla.
+  </div>
+
+  <button id="btnGrabar">
+    🔴 GRABAR
+  </button>
+
+  <button id="btnDetener" disabled>
+    ⏹ DETENER
+  </button>
+
+  <textarea
+    id="texto"
+    placeholder="Aquí aparecerá lo que digas..."
+  ></textarea>
+
+  <button id="btnEnviar" disabled>
+    📤 ENVIAR GASTO
+  </button>
+
+  <div class="nota">
+    La información será enviada al sistema de gestión de gastos.
+  </div>
+
+</div>
+
+
+<!--
+  Formulario oculto.
+  Se utiliza para enviar el texto a Apps Script
+  sin depender de google.script.run.
+-->
+<form
+  id="formulario"
+  method="POST"
+  action="https://script.google.com/macros/s/AKfycbwq8Hu73J735qcxOdYx214Z6JFQK31KChmRub6ayCsRsuGBzfbyy42scFiF6xaZQ3E8/exec"
+  target="respuesta"
+  style="display:none;"
+>
+
+  <input
+    type="hidden"
+    name="texto"
+    id="campoTexto"
+  >
+
+</form>
+
+<iframe
+  name="respuesta"
+  id="respuesta"
+  style="display:none;"
+></iframe>
+
+
+<script>
+
+  const btnGrabar =
+    document.getElementById("btnGrabar");
+
+  const btnDetener =
+    document.getElementById("btnDetener");
+
+  const btnEnviar =
+    document.getElementById("btnEnviar");
+
+  const texto =
+    document.getElementById("texto");
+
+  const estado =
+    document.getElementById("estado");
+
+  const formulario =
+    document.getElementById("formulario");
+
+  const campoTexto =
+    document.getElementById("campoTexto");
+
+
+  let reconocimiento = null;
+  let grabando = false;
+
+
+  // ==========================================
+  // RECONOCIMIENTO DE VOZ
+  // ==========================================
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+  if (!SpeechRecognition) {
+
+    estado.innerText =
+      "❌ Este navegador no admite reconocimiento de voz. Usa Google Chrome.";
+
+    btnGrabar.disabled = true;
+
+  } else {
+
+    reconocimiento =
+      new SpeechRecognition();
+
+    reconocimiento.lang = "es-CO";
+
+    reconocimiento.continuous = true;
+
+    reconocimiento.interimResults = true;
+
+
+    reconocimiento.onstart = function() {
+
+      grabando = true;
+
+      estado.innerText =
+        "🎙️ Escuchando... habla normalmente.";
+
+      btnGrabar.disabled = true;
+
+      btnDetener.disabled = false;
+
+      btnEnviar.disabled = true;
+    };
+
+
+    reconocimiento.onresult = function(event) {
+
+      let resultado = "";
+
+      for (
+        let i = 0;
+        i < event.results.length;
+        i++
+      ) {
+
+        resultado +=
+          event.results[i][0].transcript + " ";
+      }
+
+      texto.value =
+        resultado.trim();
+
+      btnEnviar.disabled =
+        texto.value.trim() === "";
+    };
+
+
+    reconocimiento.onerror = function(event) {
+
+      grabando = false;
+
+      estado.innerText =
+        "❌ Error del micrófono: " +
+        event.error;
+
+      btnGrabar.disabled = false;
+
+      btnDetener.disabled = true;
+    };
+
+
+    reconocimiento.onend = function() {
+
+      if (grabando) {
+
+        try {
+
+          reconocimiento.start();
+
+        } catch (error) {}
+
+      } else {
+
+        btnGrabar.disabled = false;
+
+        btnDetener.disabled = true;
+
+        btnEnviar.disabled =
+          texto.value.trim() === "";
+
+        estado.innerText =
+          "✅ Grabación detenida. Revisa el texto.";
+      }
+    };
+
+  }
+
+
+  // ==========================================
+  // GRABAR
+  // ==========================================
+
+  btnGrabar.onclick = function() {
+
+    if (!reconocimiento) {
+      return;
+    }
+
+    texto.value = "";
+
+    grabando = true;
+
+    estado.innerText =
+      "🎙️ Iniciando micrófono...";
+
+    try {
+
+      reconocimiento.start();
+
+    } catch (error) {
+
+      estado.innerText =
+        "❌ No se pudo iniciar el micrófono.";
+
+      grabando = false;
+    }
+
+  };
+
+
+  // ==========================================
+  // DETENER
+  // ==========================================
+
+  btnDetener.onclick = function() {
+
+    if (!reconocimiento) {
+      return;
+    }
+
+    grabando = false;
+
+    reconocimiento.stop();
+
+  };
+
+
+  // ==========================================
+  // ENVIAR
+  // ==========================================
+
+  btnEnviar.onclick = function() {
+
+    const contenido =
+      texto.value.trim();
+
+    if (!contenido) {
+
+      estado.innerText =
+        "❌ No hay ningún texto para enviar.";
+
+      return;
+    }
+
+    campoTexto.value =
+      contenido;
+
+    estado.innerText =
+      "📤 Enviando gasto...";
+
+    btnEnviar.disabled = true;
+
+    formulario.submit();
+
+    setTimeout(function() {
+
+      estado.innerText =
+        "✅ Gasto enviado al sistema.";
+
+      texto.value = "";
+
+      btnEnviar.disabled = true;
+
+    }, 2500);
+
+  };
+
+</script>
+
+</body>
+</html>
