@@ -179,7 +179,7 @@
     document.getElementById("campoTexto");
 
 
-  let reconocimiento = null;
+  let  = null;
   let grabando = false;
 
 
@@ -206,9 +206,9 @@
 
     reconocimiento.lang = "es-CO";
 
-    reconocimiento.continuous = true;
+    reconocimiento.continuous = false;
 
-    reconocimiento.interimResults = true;
+    reconocimiento.interimResults = false;
 
 
     reconocimiento.onstart = function() {
@@ -230,23 +230,18 @@ let textoFinal = "";
 
 reconocimiento.onresult = function(event) {
 
-  let resultadoCompleto = "";
-
-  for (let i = 0; i < event.results.length; i++) {
-
-    const transcripcion =
-      event.results[i][0].transcript.trim();
-
-    if (transcripcion !== "") {
-      resultadoCompleto += transcripcion + " ";
-    }
+  if (!event.results || !event.results.length) {
+    return;
   }
 
-  texto.value =
-    resultadoCompleto.trim();
+  const resultado =
+    event.results[0][0].transcript.trim();
+
+  texto.value = resultado;
 
   btnEnviar.disabled =
-    texto.value.trim() === "";
+    resultado === "";
+
 };
 
     reconocimiento.onerror = function(event) {
@@ -263,29 +258,21 @@ reconocimiento.onresult = function(event) {
     };
 
 
-    reconocimiento.onend = function() {
+reconocimiento.onend = function() {
 
-      if (grabando) {
+  grabando = false;
 
-        try {
+  btnGrabar.disabled = false;
 
-          reconocimiento.start();
+  btnDetener.disabled = true;
 
-        } catch (error) {}
+  btnEnviar.disabled =
+    texto.value.trim() === "";
 
-      } else {
+  estado.innerText =
+    "✅ Grabación terminada. Revisa el texto.";
 
-        btnGrabar.disabled = false;
-
-        btnDetener.disabled = true;
-
-        btnEnviar.disabled =
-          texto.value.trim() === "";
-
-        estado.innerText =
-          "✅ Grabación detenida. Revisa el texto.";
-      }
-    };
+};
 
   }
 
