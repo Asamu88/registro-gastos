@@ -150,13 +150,6 @@
   const estado =
     document.getElementById("estado");
 
-  const formulario =
-    document.getElementById("formulario");
-
-  const campoTexto =
-    document.getElementById("campoTexto");
-
-
   let reconocimiento = null;
   let grabando = false;
 
@@ -308,41 +301,69 @@ reconocimiento.onend = function() {
   // ENVIAR
   // ==========================================
 
-  btnEnviar.onclick = function() {
+btnEnviar.onclick = async function() {
 
-    const contenido =
-      texto.value.trim();
+  const contenido =
+    texto.value.trim();
 
-    if (!contenido) {
-
-      estado.innerText =
-        "❌ No hay ningún texto para enviar.";
-
-      return;
-    }
-
-    campoTexto.value =
-      contenido;
+  if (!contenido) {
 
     estado.innerText =
-      "📤 Enviando gasto...";
+      "❌ No hay ningún texto para enviar.";
+
+    return;
+  }
+
+  estado.innerText =
+    "📤 Enviando gasto...";
+
+  btnEnviar.disabled = true;
+  btnGrabar.disabled = true;
+  btnDetener.disabled = true;
+
+  try {
+
+    const respuesta = await fetch(
+      "https://script.google.com/macros/s/AKfycbz_aBU-3zJ-ajk79MCNLGCEdRhci0uTkxuDVHRVHf6rOr8KIYqcS6aLZHL3dpN0ju6mRA/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/x-www-form-urlencoded"
+        },
+        body:
+          "texto=" +
+          encodeURIComponent(contenido)
+      }
+    );
+
+    const resultado =
+      await respuesta.text();
+
+    console.log("Respuesta Apps Script:", resultado);
+
+    estado.innerText =
+      "✅ " + resultado;
+
+    texto.value = "";
+
+  } catch (error) {
+
+    console.error(error);
+
+    estado.innerText =
+      "❌ Error al enviar el gasto: " +
+      error.message;
+
+  } finally {
 
     btnEnviar.disabled = true;
+    btnGrabar.disabled = false;
+    btnDetener.disabled = true;
 
-    formulario.submit();
+  }
 
-    setTimeout(function() {
-
-      estado.innerText =
-        "✅ Gasto enviado al sistema.";
-
-      texto.value = "";
-
-      btnEnviar.disabled = true;
-
-    }, 2500);
-
-  };
+};
 
 </script>
 
