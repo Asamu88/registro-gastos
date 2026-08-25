@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 
@@ -30,7 +31,7 @@
       max-width: 600px;
       margin: auto;
       background: white;
-      padding: 25px;
+      padding: 22px;
       border-radius: 18px;
       box-shadow: 0 3px 12px rgba(0,0,0,.15);
     }
@@ -105,37 +106,30 @@
 
 <body>
 
-
 <div class="contenedor">
 
   <h1>🎙️ Registro de gastos</h1>
-
 
   <div id="estado">
     Presiona GRABAR y habla.
   </div>
 
-
   <button id="btnGrabar">
     🔴 GRABAR
   </button>
 
-
   <button id="btnDetener" disabled>
     ⏹ DETENER
   </button>
-
 
   <textarea
     id="texto"
     placeholder="Aquí aparecerá lo que digas..."
   ></textarea>
 
-
   <button id="btnEnviar" disabled>
     📤 ENVIAR GASTO
   </button>
-
 
   <div class="nota">
     La información será enviada al sistema de gestión de gastos.
@@ -144,9 +138,9 @@
 </div>
 
 
-<!-- =====================================================
-     FORMULARIO OCULTO PARA ENVIAR A GOOGLE APPS SCRIPT
-     ===================================================== -->
+<!-- ==================================================
+     FORMULARIO PARA ENVIAR A GOOGLE APPS SCRIPT
+     ================================================== -->
 
 <form
   id="formulario"
@@ -166,8 +160,8 @@
 
 
 <!--
-  El formulario envía la información a este iframe.
-  Así evitamos que Chrome abra una pestaña nueva.
+  El resultado del POST se recibe aquí.
+  Así evitamos abrir una pestaña nueva.
 -->
 
 <iframe
@@ -179,10 +173,9 @@
 
 <script>
 
-
-  // =====================================================
+  // ==================================================
   // ELEMENTOS
-  // =====================================================
+  // ==================================================
 
   const btnGrabar =
     document.getElementById("btnGrabar");
@@ -206,22 +199,17 @@
     document.getElementById("campoTexto");
 
 
-  // =====================================================
-  // VARIABLES
-  // =====================================================
-
-  let reconocimiento = null;
-
-  let grabando = false;
-
-
-  // =====================================================
+  // ==================================================
   // RECONOCIMIENTO DE VOZ
-  // =====================================================
+  // ==================================================
 
   const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
+
+  let reconocimiento = null;
+
+  let grabando = false;
 
 
   if (!SpeechRecognition) {
@@ -233,310 +221,231 @@
 
   } else {
 
-
     reconocimiento =
       new SpeechRecognition();
 
+    reconocimiento.lang = "es-CO";
 
-    reconocimiento.lang =
-      "es-CO";
+    reconocimiento.continuous = false;
 
-
-    reconocimiento.continuous =
-      false;
+    reconocimiento.interimResults = false;
 
 
-    reconocimiento.interimResults =
-      false;
-
-
-    // ===================================================
+    // ==================================================
     // INICIO DE GRABACIÓN
-    // ===================================================
+    // ==================================================
 
-    reconocimiento.onstart =
-      function() {
+    reconocimiento.onstart = function() {
 
-        grabando = true;
+      grabando = true;
 
+      estado.innerText =
+        "🎙️ Escuchando... habla normalmente.";
 
-        estado.innerText =
-          "🎙️ Escuchando... habla normalmente.";
+      btnGrabar.disabled = true;
 
+      btnDetener.disabled = false;
 
-        btnGrabar.disabled =
-          true;
+      btnEnviar.disabled = true;
 
-
-        btnDetener.disabled =
-          false;
+    };
 
 
-        btnEnviar.disabled =
-          true;
-
-      };
-
-
-    // ===================================================
+    // ==================================================
     // RESULTADO DE VOZ
-    // ===================================================
+    // ==================================================
 
-    reconocimiento.onresult =
-      function(event) {
+    reconocimiento.onresult = function(event) {
 
-        if (
-          !event.results ||
-          !event.results.length
-        ) {
-          return;
-        }
+      if (
+        !event.results ||
+        !event.results.length
+      ) {
+        return;
+      }
 
+      const resultado =
+        event.results[0][0]
+          .transcript
+          .trim();
 
-        const resultado =
-          event.results[0][0].transcript.trim();
+      texto.value = resultado;
 
+      btnEnviar.disabled =
+        resultado === "";
 
-        texto.value =
-          resultado;
-
-
-        btnEnviar.disabled =
-          resultado === "";
-
-
-        estado.innerText =
-          "✅ Texto reconocido. Puedes revisarlo y enviarlo.";
-
-      };
+    };
 
 
-    // ===================================================
+    // ==================================================
     // ERROR
-    // ===================================================
+    // ==================================================
 
-    reconocimiento.onerror =
-      function(event) {
+    reconocimiento.onerror = function(event) {
 
-        grabando =
-          false;
+      grabando = false;
 
+      estado.innerText =
+        "❌ Error del micrófono: " +
+        event.error;
+
+      btnGrabar.disabled = false;
+
+      btnDetener.disabled = true;
+
+    };
+
+
+    // ==================================================
+    // FINALIZACIÓN
+    // ==================================================
+
+    reconocimiento.onend = function() {
+
+      grabando = false;
+
+      btnGrabar.disabled = false;
+
+      btnDetener.disabled = true;
+
+      btnEnviar.disabled =
+        texto.value.trim() === "";
+
+      if (texto.value.trim() !== "") {
 
         estado.innerText =
-          "❌ Error del micrófono: " +
-          event.error;
+          "✅ Grabación terminada. Revisa el texto.";
 
+      } else {
 
-        btnGrabar.disabled =
-          false;
+        estado.innerText =
+          "🎙️ No se detectó ningún texto.";
 
+      }
 
-        btnDetener.disabled =
-          true;
-
-      };
-
-
-    // ===================================================
-    // FINAL DE GRABACIÓN
-    // ===================================================
-
-    reconocimiento.onend =
-      function() {
-
-        grabando =
-          false;
-
-
-        btnGrabar.disabled =
-          false;
-
-
-        btnDetener.disabled =
-          true;
-
-
-        btnEnviar.disabled =
-          texto.value.trim() === "";
-
-
-        if (texto.value.trim() !== "") {
-
-          estado.innerText =
-            "✅ Grabación terminada. Revisa el texto.";
-
-        } else {
-
-          estado.innerText =
-            "🎙️ No se detectó texto. Intenta nuevamente.";
-
-        }
-
-      };
+    };
 
   }
 
 
-  // =====================================================
+  // ==================================================
   // BOTÓN GRABAR
-  // =====================================================
+  // ==================================================
 
-  btnGrabar.onclick =
-    function() {
+  btnGrabar.onclick = function() {
 
-      if (!reconocimiento) {
-        return;
-      }
+    if (!reconocimiento) {
+      return;
+    }
 
+    texto.value = "";
 
-      texto.value =
-        "";
+    btnEnviar.disabled = true;
 
+    grabando = true;
 
-      grabando =
-        true;
+    estado.innerText =
+      "🎙️ Iniciando micrófono...";
 
+    try {
+
+      reconocimiento.start();
+
+    } catch (error) {
 
       estado.innerText =
-        "🎙️ Iniciando micrófono...";
+        "❌ No se pudo iniciar el micrófono.";
+
+      grabando = false;
+
+    }
+
+  };
 
 
-      try {
-
-        reconocimiento.start();
-
-      } catch (error) {
-
-        console.log(error);
-
-
-        estado.innerText =
-          "❌ No se pudo iniciar el micrófono.";
-
-
-        grabando =
-          false;
-
-      }
-
-    };
-
-
-  // =====================================================
+  // ==================================================
   // BOTÓN DETENER
-  // =====================================================
+  // ==================================================
 
-  btnDetener.onclick =
-    function() {
+  btnDetener.onclick = function() {
 
-      if (!reconocimiento) {
-        return;
-      }
+    if (!reconocimiento) {
+      return;
+    }
 
+    grabando = false;
 
-      grabando =
-        false;
+    reconocimiento.stop();
 
-
-      reconocimiento.stop();
-
-    };
+  };
 
 
-  // =====================================================
+  // ==================================================
   // BOTÓN ENVIAR
-  // =====================================================
+  // ==================================================
 
-  btnEnviar.onclick =
-    function() {
+  btnEnviar.onclick = function() {
 
-      const contenido =
-        texto.value.trim();
-
-
-      // -----------------------------------------------
-      // COMPROBAR TEXTO
-      // -----------------------------------------------
-
-      if (!contenido) {
-
-        estado.innerText =
-          "❌ No hay ningún texto para enviar.";
-
-        return;
-
-      }
+    const contenido =
+      texto.value.trim();
 
 
-      // -----------------------------------------------
-      // COLOCAR TEXTO EN EL FORMULARIO
-      // -----------------------------------------------
-
-      campoTexto.value =
-        contenido;
-
-
-      // -----------------------------------------------
-      // ESTADO
-      // -----------------------------------------------
+    if (!contenido) {
 
       estado.innerText =
-        "📤 Enviando gasto al sistema...";
+        "❌ No hay ningún texto para enviar.";
+
+      return;
+
+    }
 
 
-      // -----------------------------------------------
-      // BLOQUEAR BOTONES
-      // -----------------------------------------------
+    // Colocar el texto en el formulario
 
-      btnEnviar.disabled =
-        true;
-
-      btnGrabar.disabled =
-        true;
-
-      btnDetener.disabled =
-        true;
+    campoTexto.value =
+      contenido;
 
 
-      // -----------------------------------------------
-      // ENVIAR A GOOGLE APPS SCRIPT
-      // -----------------------------------------------
-
-      formulario.submit();
+    estado.innerText =
+      "📤 Enviando gasto...";
 
 
-      // -----------------------------------------------
-      // ESPERAR RESPUESTA DEL PROCESAMIENTO
-      // -----------------------------------------------
+    btnEnviar.disabled = true;
 
-      setTimeout(
-        function() {
+    btnGrabar.disabled = true;
 
-          estado.innerText =
-            "✅ Gasto enviado al sistema.";
+    btnDetener.disabled = true;
 
 
-          texto.value =
-            "";
+    // Enviar POST a Apps Script
+
+    formulario.submit();
 
 
-          btnEnviar.disabled =
-            true;
+    /*
+      No abrimos ninguna pestaña nueva.
+      El POST va al iframe oculto.
+    */
 
+    setTimeout(function() {
 
-          btnGrabar.disabled =
-            false;
+      estado.innerText =
+        "✅ Gasto enviado al sistema.";
 
-        },
-        3000
-      );
+      texto.value = "";
 
-    };
+      btnEnviar.disabled = true;
+
+      btnGrabar.disabled = false;
+
+    }, 2500);
+
+  };
 
 
 </script>
 
-
 </body>
 
 </html>
+```
