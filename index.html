@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -12,14 +14,19 @@
 
   <style>
 
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
       background: #f2f2f2;
     }
 
     .contenedor {
+      width: 100%;
       max-width: 600px;
       margin: auto;
       background: white;
@@ -31,6 +38,7 @@
     h1 {
       text-align: center;
       margin-top: 0;
+      font-size: 26px;
     }
 
     #estado {
@@ -39,6 +47,7 @@
       background: #eeeeee;
       border-radius: 10px;
       text-align: center;
+      line-height: 1.4;
     }
 
     button {
@@ -76,7 +85,6 @@
       min-height: 180px;
       margin-top: 15px;
       padding: 12px;
-      box-sizing: border-box;
       border: 1px solid #ccc;
       border-radius: 10px;
       font-size: 17px;
@@ -91,34 +99,43 @@
     }
 
   </style>
+
 </head>
 
+
 <body>
+
 
 <div class="contenedor">
 
   <h1>🎙️ Registro de gastos</h1>
 
+
   <div id="estado">
     Presiona GRABAR y habla.
   </div>
+
 
   <button id="btnGrabar">
     🔴 GRABAR
   </button>
 
+
   <button id="btnDetener" disabled>
     ⏹ DETENER
   </button>
+
 
   <textarea
     id="texto"
     placeholder="Aquí aparecerá lo que digas..."
   ></textarea>
 
+
   <button id="btnEnviar" disabled>
     📤 ENVIAR GASTO
   </button>
+
 
   <div class="nota">
     La información será enviada al sistema de gestión de gastos.
@@ -127,13 +144,45 @@
 </div>
 
 
+<!-- =====================================================
+     FORMULARIO OCULTO PARA ENVIAR A GOOGLE APPS SCRIPT
+     ===================================================== -->
+
+<form
+  id="formulario"
+  method="POST"
+  action="https://script.google.com/macros/s/AKfycbz_aBU-3zJ-ajk79MCNLGCEdRhci0uTkxuDVHRVHf6rOr8KIYqcS6aLZHL3dpN0ju6mRA/exec"
+  target="respuesta"
+  style="display:none;"
+>
+
+  <input
+    type="hidden"
+    name="texto"
+    id="campoTexto"
+  >
+
+</form>
+
+
 <!--
-  Formulario oculto.
-  Se utiliza para enviar el texto a Apps Script
-  sin depender de google.script.run.
+  El formulario envía la información a este iframe.
+  Así evitamos que Chrome abra una pestaña nueva.
 -->
 
+<iframe
+  name="respuesta"
+  id="respuesta"
+  style="display:none;"
+></iframe>
+
+
 <script>
+
+
+  // =====================================================
+  // ELEMENTOS
+  // =====================================================
 
   const btnGrabar =
     document.getElementById("btnGrabar");
@@ -150,13 +199,25 @@
   const estado =
     document.getElementById("estado");
 
+  const formulario =
+    document.getElementById("formulario");
+
+  const campoTexto =
+    document.getElementById("campoTexto");
+
+
+  // =====================================================
+  // VARIABLES
+  // =====================================================
+
   let reconocimiento = null;
+
   let grabando = false;
 
 
-  // ==========================================
+  // =====================================================
   // RECONOCIMIENTO DE VOZ
-  // ==========================================
+  // =====================================================
 
   const SpeechRecognition =
     window.SpeechRecognition ||
@@ -172,200 +233,310 @@
 
   } else {
 
+
     reconocimiento =
       new SpeechRecognition();
 
-    reconocimiento.lang = "es-CO";
 
-    reconocimiento.continuous = false;
-
-    reconocimiento.interimResults = false;
+    reconocimiento.lang =
+      "es-CO";
 
 
-    reconocimiento.onstart = function() {
-
-      grabando = true;
-
-      estado.innerText =
-        "🎙️ Escuchando... habla normalmente.";
-
-      btnGrabar.disabled = true;
-
-      btnDetener.disabled = false;
-
-      btnEnviar.disabled = true;
-    };
+    reconocimiento.continuous =
+      false;
 
 
-let textoFinal = "";
+    reconocimiento.interimResults =
+      false;
 
-reconocimiento.onresult = function(event) {
 
-  if (!event.results || !event.results.length) {
-    return;
+    // ===================================================
+    // INICIO DE GRABACIÓN
+    // ===================================================
+
+    reconocimiento.onstart =
+      function() {
+
+        grabando = true;
+
+
+        estado.innerText =
+          "🎙️ Escuchando... habla normalmente.";
+
+
+        btnGrabar.disabled =
+          true;
+
+
+        btnDetener.disabled =
+          false;
+
+
+        btnEnviar.disabled =
+          true;
+
+      };
+
+
+    // ===================================================
+    // RESULTADO DE VOZ
+    // ===================================================
+
+    reconocimiento.onresult =
+      function(event) {
+
+        if (
+          !event.results ||
+          !event.results.length
+        ) {
+          return;
+        }
+
+
+        const resultado =
+          event.results[0][0].transcript.trim();
+
+
+        texto.value =
+          resultado;
+
+
+        btnEnviar.disabled =
+          resultado === "";
+
+
+        estado.innerText =
+          "✅ Texto reconocido. Puedes revisarlo y enviarlo.";
+
+      };
+
+
+    // ===================================================
+    // ERROR
+    // ===================================================
+
+    reconocimiento.onerror =
+      function(event) {
+
+        grabando =
+          false;
+
+
+        estado.innerText =
+          "❌ Error del micrófono: " +
+          event.error;
+
+
+        btnGrabar.disabled =
+          false;
+
+
+        btnDetener.disabled =
+          true;
+
+      };
+
+
+    // ===================================================
+    // FINAL DE GRABACIÓN
+    // ===================================================
+
+    reconocimiento.onend =
+      function() {
+
+        grabando =
+          false;
+
+
+        btnGrabar.disabled =
+          false;
+
+
+        btnDetener.disabled =
+          true;
+
+
+        btnEnviar.disabled =
+          texto.value.trim() === "";
+
+
+        if (texto.value.trim() !== "") {
+
+          estado.innerText =
+            "✅ Grabación terminada. Revisa el texto.";
+
+        } else {
+
+          estado.innerText =
+            "🎙️ No se detectó texto. Intenta nuevamente.";
+
+        }
+
+      };
+
   }
 
-  const resultado =
-    event.results[0][0].transcript.trim();
 
-  texto.value = resultado;
+  // =====================================================
+  // BOTÓN GRABAR
+  // =====================================================
 
-  btnEnviar.disabled =
-    resultado === "";
+  btnGrabar.onclick =
+    function() {
 
-};
-
-    reconocimiento.onerror = function(event) {
-
-      grabando = false;
-
-      estado.innerText =
-        "❌ Error del micrófono: " +
-        event.error;
-
-      btnGrabar.disabled = false;
-
-      btnDetener.disabled = true;
-    };
-
-
-reconocimiento.onend = function() {
-
-  grabando = false;
-
-  btnGrabar.disabled = false;
-
-  btnDetener.disabled = true;
-
-  btnEnviar.disabled =
-    texto.value.trim() === "";
-
-  estado.innerText =
-    "✅ Grabación terminada. Revisa el texto.";
-
-};
-
-  }
-
-
-  // ==========================================
-  // GRABAR
-  // ==========================================
-
-  btnGrabar.onclick = function() {
-
-    if (!reconocimiento) {
-      return;
-    }
-
-    texto.value = "";
-
-    grabando = true;
-
-    estado.innerText =
-      "🎙️ Iniciando micrófono...";
-
-    try {
-
-      reconocimiento.start();
-
-    } catch (error) {
-
-      estado.innerText =
-        "❌ No se pudo iniciar el micrófono.";
-
-      grabando = false;
-    }
-
-  };
-
-
-  // ==========================================
-  // DETENER
-  // ==========================================
-
-  btnDetener.onclick = function() {
-
-    if (!reconocimiento) {
-      return;
-    }
-
-    grabando = false;
-
-    reconocimiento.stop();
-
-  };
-
-
-  // ==========================================
-  // ENVIAR
-  // ==========================================
-
-btnEnviar.onclick = async function() {
-
-  const contenido =
-    texto.value.trim();
-
-  if (!contenido) {
-
-    estado.innerText =
-      "❌ No hay ningún texto para enviar.";
-
-    return;
-  }
-
-  estado.innerText =
-    "📤 Enviando gasto...";
-
-  btnEnviar.disabled = true;
-  btnGrabar.disabled = true;
-  btnDetener.disabled = true;
-
-  try {
-
-    const respuesta = await fetch(
-      "https://script.google.com/macros/s/AKfycbz_aBU-3zJ-ajk79MCNLGCEdRhci0uTkxuDVHRVHf6rOr8KIYqcS6aLZHL3dpN0ju6mRA/exec",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/x-www-form-urlencoded"
-        },
-        body:
-          "texto=" +
-          encodeURIComponent(contenido)
+      if (!reconocimiento) {
+        return;
       }
-    );
 
-    const resultado =
-      await respuesta.text();
 
-    console.log("Respuesta Apps Script:", resultado);
+      texto.value =
+        "";
 
-    estado.innerText =
-      "✅ " + resultado;
 
-    texto.value = "";
+      grabando =
+        true;
 
-  } catch (error) {
 
-    console.error(error);
+      estado.innerText =
+        "🎙️ Iniciando micrófono...";
 
-    estado.innerText =
-      "❌ Error al enviar el gasto: " +
-      error.message;
 
-  } finally {
+      try {
 
-    btnEnviar.disabled = true;
-    btnGrabar.disabled = false;
-    btnDetener.disabled = true;
+        reconocimiento.start();
 
-  }
+      } catch (error) {
 
-};
+        console.log(error);
+
+
+        estado.innerText =
+          "❌ No se pudo iniciar el micrófono.";
+
+
+        grabando =
+          false;
+
+      }
+
+    };
+
+
+  // =====================================================
+  // BOTÓN DETENER
+  // =====================================================
+
+  btnDetener.onclick =
+    function() {
+
+      if (!reconocimiento) {
+        return;
+      }
+
+
+      grabando =
+        false;
+
+
+      reconocimiento.stop();
+
+    };
+
+
+  // =====================================================
+  // BOTÓN ENVIAR
+  // =====================================================
+
+  btnEnviar.onclick =
+    function() {
+
+      const contenido =
+        texto.value.trim();
+
+
+      // -----------------------------------------------
+      // COMPROBAR TEXTO
+      // -----------------------------------------------
+
+      if (!contenido) {
+
+        estado.innerText =
+          "❌ No hay ningún texto para enviar.";
+
+        return;
+
+      }
+
+
+      // -----------------------------------------------
+      // COLOCAR TEXTO EN EL FORMULARIO
+      // -----------------------------------------------
+
+      campoTexto.value =
+        contenido;
+
+
+      // -----------------------------------------------
+      // ESTADO
+      // -----------------------------------------------
+
+      estado.innerText =
+        "📤 Enviando gasto al sistema...";
+
+
+      // -----------------------------------------------
+      // BLOQUEAR BOTONES
+      // -----------------------------------------------
+
+      btnEnviar.disabled =
+        true;
+
+      btnGrabar.disabled =
+        true;
+
+      btnDetener.disabled =
+        true;
+
+
+      // -----------------------------------------------
+      // ENVIAR A GOOGLE APPS SCRIPT
+      // -----------------------------------------------
+
+      formulario.submit();
+
+
+      // -----------------------------------------------
+      // ESPERAR RESPUESTA DEL PROCESAMIENTO
+      // -----------------------------------------------
+
+      setTimeout(
+        function() {
+
+          estado.innerText =
+            "✅ Gasto enviado al sistema.";
+
+
+          texto.value =
+            "";
+
+
+          btnEnviar.disabled =
+            true;
+
+
+          btnGrabar.disabled =
+            false;
+
+        },
+        3000
+      );
+
+    };
+
 
 </script>
 
+
 </body>
+
 </html>
